@@ -28,6 +28,18 @@ const (
 	// certificate has a name constraint which doesn't include the name
 	// being checked.
 	CANotAuthorizedForThisName
+	// CANotAuthorizedForThisEmail results when an intermediate or root
+	// certificate has a name constraint which doesn't include the email
+	// being checked.
+	CANotAuthorizedForThisEmail
+	// CANotAuthorizedForThisEmail results when an intermediate or root
+	// certificate has a name constraint which doesn't include the IP
+	// being checked.
+	CANotAuthorizedForThisIP
+	// CANotAuthorizedForThisDirectory results when an intermediate or root
+	// certificate has a name constraint which doesn't include the directory
+	// being checked.
+	CANotAuthorizedForThisDirectory
 	// TooManyIntermediates results when a path length constraint is
 	// violated.
 	TooManyIntermediates
@@ -54,6 +66,12 @@ func (e CertificateInvalidError) Error() string {
 		return "x509: certificate has expired or is not yet valid"
 	case CANotAuthorizedForThisName:
 		return "x509: a root or intermediate certificate is not authorized to sign in this domain"
+	case CANotAuthorizedForThisEmail:
+		return "x509: a root or intermediate certificate is not authorized to sign this email address"
+	case CANotAuthorizedForThisIP:
+		return "x509: a root or intermediate certificate is not authorized to sign this IP address"
+	case CANotAuthorizedForThisDirectory:
+		return "x509: a root or intermediate certificate is not authorized to sign in this directory"
 	case TooManyIntermediates:
 		return "x509: too many intermediates for path length constraint"
 	case IncompatibleUsage:
@@ -147,7 +165,10 @@ var errNotParsed = errors.New("x509: missing ASN.1 contents; use ParseCertificat
 // VerifyOptions contains parameters for Certificate.Verify. It's a structure
 // because other PKIX verification APIs have ended up needing many options.
 type VerifyOptions struct {
-	DNSName       string
+	DNSName      string
+	EmailAddress string
+	IPAddress    net.IP
+
 	Intermediates *CertPool
 	Roots         *CertPool // if nil, the system roots are used
 	CurrentTime   time.Time // if zero, the current time is used

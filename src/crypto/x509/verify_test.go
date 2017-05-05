@@ -23,6 +23,8 @@ type verifyTest struct {
 	roots                []string
 	currentTime          int64
 	dnsName              string
+	emailAddress         string
+	ipAddress            net.IP
 	systemSkip           bool
 	keyUsages            []ExtKeyUsage
 	testSystemRootsError bool
@@ -206,6 +208,183 @@ var verifyTests = []verifyTest{
 		},
 	},
 	{
+		// Check that a name constrained intermediate doesn allow a dnsname that
+		// includes a subdomain when it's constraint to subdomains only.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "www.golang.org",
+
+		expectedChains: [][]string{
+			{
+				"Gopher Inc.",
+				"Golang ECC Issuing CA",
+				"Golang ECC CA",
+			},
+		},
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a domain
+		// when it's constraint to subdomains only.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "golang.org",
+
+		errorCallback: expectCANotAuthorizedForThisName,
+	},
+	{
+		// Check that a name constrained intermediate does allow a dnsname with
+		// no subdomain when it's constraint to a domain wihtout leading dot.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "golang.com",
+
+		expectedChains: [][]string{
+			{
+				"Gopher Inc.",
+				"Golang ECC Issuing CA",
+				"Golang ECC CA",
+			},
+		},
+	},
+	{
+		// Check that a name constrained intermediate does allow a dnsname with
+		// subdomain when it's constraint to a domain wihtout leading dot.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "www.golang.com",
+
+		expectedChains: [][]string{
+			{
+				"Gopher Inc.",
+				"Golang ECC Issuing CA",
+				"Golang ECC CA",
+			},
+		},
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a different
+		// dnsname then it's constraint to.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "www.example.com",
+
+		errorCallback: expectCANotAuthorizedForThisName,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a different
+		// email domain then it's constraint to. The certificate is contraint to
+		// the email domain golang.com and should not allow subdomains.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		emailAddress:  "mail@golang.com",
+
+		expectedChains: [][]string{
+			{
+				"Gopher Inc.",
+				"Golang ECC Issuing CA",
+				"Golang ECC CA",
+			},
+		},
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a different
+		// email domain then it's constraint to. The certificate is contraint to
+		// the email domain golang.com and should not allow subdomains.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		emailAddress:  "mail@subdomain.golang.com",
+
+		errorCallback: expectCANotAuthorizedForThisEmail,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a different
+		// email domain then it's constraint to. The certificate is contraint to
+		// subdomains of golang.org.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		emailAddress:  "mail@subdomain.golang.org",
+
+		expectedChains: [][]string{
+			{
+				"Gopher Inc.",
+				"Golang ECC Issuing CA",
+				"Golang ECC CA",
+			},
+		},
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a different
+		// email domain then it's constraint to. The certificate is contraint to
+		// subdomains of golang.org.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		emailAddress:  "mail@golang.org",
+
+		errorCallback: expectCANotAuthorizedForThisEmail,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow an email
+		// address when it's constraint to a different domain.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		emailAddress:  "mail@example.com",
+
+		errorCallback: expectCANotAuthorizedForThisEmail,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow an IPv4
+		// address when it's constraint to exluded the entire IP space.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		ipAddress:     net.IPv4(127, 0, 0, 1),
+
+		errorCallback: expectCANotAuthorizedForThisIP,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow an IPv6
+		// address when it's constraint to exluded the entire IP space.
+		leaf:          goNameConstraintsCert1,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		ipAddress:     net.ParseIP("::1"),
+
+		errorCallback: expectCANotAuthorizedForThisIP,
+	},
+	{
+		// Check that a name constrained intermediate doesn't allow a mofified
+		// directory name when constraint to certain values.
+		leaf:          goNameConstraintsCert2,
+		intermediates: []string{goNameConstraintsIssuer},
+		roots:         []string{goNameConstraintsRoot},
+		currentTime:   1435058029,
+		dnsName:       "test2.golang.org",
+
+		errorCallback: expectCANotAuthorizedForThisDirectory,
+	},
+	{
 		// Check that SHA-384 intermediates (which are popping up)
 		// work.
 		leaf:          moipLeafCert,
@@ -330,6 +509,38 @@ func expectSubjectIssuerMismatcthError(t *testing.T, i int, err error) (ok bool)
 	return true
 }
 
+func expectCANotAuthorizedForThisName(t *testing.T, i int, err error) (ok bool) {
+	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisName {
+		t.Errorf("#%d: error was not CANotAuthorizedForThisName: %s", i, err)
+		return false
+	}
+	return true
+}
+
+func expectCANotAuthorizedForThisEmail(t *testing.T, i int, err error) (ok bool) {
+	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisEmail {
+		t.Errorf("#%d: error was not CANotAuthorizedForThisEmail: %s", i, err)
+		return false
+	}
+	return true
+}
+
+func expectCANotAuthorizedForThisIP(t *testing.T, i int, err error) (ok bool) {
+	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisIP {
+		t.Errorf("#%d: error was not CANotAuthorizedForThisIP: %s", i, err)
+		return false
+	}
+	return true
+}
+
+func expectCANotAuthorizedForThisDirectory(t *testing.T, i int, err error) (ok bool) {
+	if inval, ok := err.(CertificateInvalidError); !ok || inval.Reason != CANotAuthorizedForThisDirectory {
+		t.Errorf("#%d: error was not CANotAuthorizedForThisDirectory: %s", i, err)
+		return false
+	}
+	return true
+}
+
 func certificateFromPEM(pemBytes string) (*Certificate, error) {
 	block, _ := pem.Decode([]byte(pemBytes))
 	if block == nil {
@@ -353,6 +564,8 @@ func testVerify(t *testing.T, useSystemRoots bool) {
 		opts := VerifyOptions{
 			Intermediates: NewCertPool(),
 			DNSName:       test.dnsName,
+			EmailAddress:  test.emailAddress,
+			IPAddress:     test.ipAddress,
 			CurrentTime:   time.Unix(test.currentTime, 0),
 			KeyUsages:     test.keyUsages,
 		}
