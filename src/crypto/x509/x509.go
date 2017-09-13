@@ -1202,9 +1202,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				getDNSNames := func(subtrees []generalSubtree, isCritical bool) (dnsNames []string, err error) {
 					for _, subtree := range subtrees {
 						if len(subtree.Name) == 0 {
-							if isCritical {
-								return nil, UnhandledCriticalExtension{}
-							}
+							// if isCritical {
+							// 	return nil, UnhandledCriticalExtension{}
+							// }
 							continue
 						}
 						dnsNames = append(dnsNames, subtree.Name)
